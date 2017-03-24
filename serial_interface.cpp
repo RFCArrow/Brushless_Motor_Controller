@@ -1,6 +1,6 @@
 #include "serial_interface.h"
 #include <math.h>
-//#define DEBUG_INTERFACE
+
 
 Serial_Interface::Serial_Interface(){
     buf_index = 0;
@@ -8,10 +8,14 @@ Serial_Interface::Serial_Interface(){
     save_position = 1;
 }
 
+
 void Serial_Interface::handle(RawSerial &serial, float position){
     current_position = position;
+    
+    //Get all the contents of the serial bus
     while(serial.readable() && buf_index<BUFFLENGTH) {
         buffer[buf_index] = serial.getc();
+        //At the new line, add null terminator
         if(buffer[buf_index] == '\n') {
              buffer[buf_index] = '\0';
              finished = 1;
@@ -20,13 +24,13 @@ void Serial_Interface::handle(RawSerial &serial, float position){
         }
             buf_index++;
     }
+    //If new line, end of transmission
     if(finished) {
+        //Parse the commands
         parse_input( serial );
         finished = 0;
         save_position = target_position - current_position;
-    }
-    //posoffset_val = current_position - target_position;
-        
+    }   
 }
 
 void Serial_Interface::parse_input(RawSerial &serial)

@@ -1,8 +1,5 @@
 #include "Motor.h"
 
-//#include "RawSerial.h"
-//RawSerial serial(SERIAL_TX, SERIAL_RX);
-
 //Motor Drive outputs
 DigitalOut L1L(L1Lpin);
 DigitalOut L1H(L1Hpin);
@@ -15,8 +12,6 @@ DigitalOut L3H(L3Hpin);
 Motor::Motor(){
     orState = 0;
     lead = 2;  //2 for forwards, -2 for backwards
-    //serial.baud(115200);
-    //serial.printf("Hello");
 }
 
 //Set a given drive state
@@ -24,11 +19,6 @@ void Motor::output(int8_t intState){
     
     
     int8_t driveState = (intState-orState+lead+6)%6;//+6 to make sure the remainder is positive
-    
-    //serial.printf("New state: %i \t",intState);
-    //serial.printf("Original state: %i \t",orState);
-    //serial.printf("Drive state: %i \n\r",driveState);
-    
     
     //Lookup the output byte from the drive state.
     int8_t driveOut = driveTable[driveState & 0x07];

@@ -17,18 +17,12 @@ Sensors::Sensors() : CHA_Interrupt(PinName(CHA)), CHB_Interrupt(PinName(CHB))
     
     sample_period = 0.1f;
     oldState = rotor_state();
-    
-    
-    //I1_Interrupt.rise(callback(this, &Sensors::i1_rise));
-    //I1_Interrupt.fall(callback(this, &Sensors::i1_fall));
-    //I2_Interrupt.rise(callback(this, &Sensors::i2_rise));
-    //I2_Interrupt.fall(callback(this, &Sensors::i2_fall));
-    //I3_Interrupt.rise(callback(this, &Sensors::i3_rise));
-    //I3_Interrupt.fall(callback(this, &Sensors::i3_fall));
-    previous_time = 0;
-    rotation_period = 0;
+    previous_time = 0; //deprecated
+    rotation_period = 0; //deprecated
     rotations = 0;
+    //Quad position for no rotations
     quadrature_position = 0;
+    //Quad position for velocity
     quad_counter = 0;
     direction = 0;
     
@@ -39,16 +33,17 @@ Sensors::Sensors() : CHA_Interrupt(PinName(CHA)), CHB_Interrupt(PinName(CHB))
     
     us_ticker_init();
     
-    //serial.baud(115200);
-    //serial.printf("Hello");
 }
 
+//Get rotor state
 int8_t Sensors::rotor_state(){
     return stateMap[I1 + 2*I2 + 4*I3];
 }
 
+//On rising edge of quad encoder
 void Sensors::cha_rise(){
     cha_state = 1;
+    //Update quad position
     if(chb_state){
         quadrature_position--;
         quad_counter--;
@@ -57,6 +52,7 @@ void Sensors::cha_rise(){
         quadrature_position++;
         quad_counter++;
     }
+    //If state has changed, run "soft interrupts"
     if(I1 == 0 && i1_previous == 1){
        i1_rise(); 
     }
@@ -75,6 +71,7 @@ void Sensors::cha_rise(){
     else if(I3 == 1 && i3_previous == 0){
        i3_rise(); 
     }
+    //Save previous state for "soft interrupts"
     i1_previous =I1;
     i2_previous =I2;
     i3_previous =I3;

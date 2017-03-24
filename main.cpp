@@ -16,10 +16,12 @@ RawSerial serial(SERIAL_TX, SERIAL_RX);
 //#define DEBUG_INTERFACE
 //#define DEBUG_MOTOR
 
+//Ticker to sample feedback at intervals
 Ticker feedback_sampler;
 
+//set PID constants
 const  float sample_interval = 0.1f;
-const  float k = -15.0f;
+const  float k = -19.0f;
 const  float kp = 0.07f;
 const  float ki = 0.000001f;
 const  float kd = 0.0002f;
@@ -34,14 +36,14 @@ Serial_Interface serial_interface;
 
 Ticker quad_sampler;
 
+//Function prototypes
 void handle_feedback();
 float calc_rotation_offset(float target, float current);
 void serial_h_thread();
 void update_speed();
+float current_speed;
 
 Thread serial_thread;
-
-float current_speed;
     
 //Main
 int main() {
@@ -51,9 +53,6 @@ int main() {
     //Serial_Interface serial_interface;
     serial.baud(BAUDRATE);
     serial.printf("Hello");
-    
-    
-   
        
     int8_t intState = 0;
     int8_t intStateOld = 0;
@@ -86,48 +85,52 @@ int main() {
     }
 }
 
-
+//Calculate the speeds required to achieve target rotations
 float calc_rotation_offset(float target, float current){
     float tmp;
     tmp = 4.0f*((target - current)/(serial_interface.saved_position()));
     if(tmp > 1){
        return 1; 
     }
-    if(tmp < -11){
+    if(tmp < -1){
        return -1; 
     }
     return tmp;
 }
 
-
+//Ticker interrupt function to find new feedback values 
 void handle_feedback(){
     float speed = 0;
+    //R and V commands received
     if (serial_interface.position_change() && serial_interface.velocity_change()){
+        //Find speed to achieve roations
         speed = serial_interface.velocity() * calc_rotation_offset(serial_interface.position(), sense.current_position());
+        //Set speed
         motor.set_lead(pid.feedback(current_speed, speed));
     }
+    //Only V command received
     else if (!serial_interface.position_change() && serial_interface.velocity_change()){
         speed = serial_interface.velocity();
+        //Set speed
         motor.set_lead(pid.feedback(current_speed, speed));
     }
+    //Only R command received
     else if (serial_interface.position_change() && !serial_interface.velocity_change()){
         //1st Case * 100.0f
         speed = 10000.0f * calc_rotation_offset(serial_interface.position(), sense.current_position());
         motor.set_lead(pid.feedback(current_speed, speed));
     }
+    //Stop motor
     else {
         motor.set_lead(pid.feedback(sense.current_position(), 0.0f));
     }
-    //serial.printf("Position: %f, Speed: %f\n\r",sense.current_position(), sense.current_velocity());
-    //serial.printf("%f\n\r",pid.total());
-    //serial.printf("%i, %i\n\r", serial_interface.position_change(), serial_interface.velocity_change());
     
 }
-
+//Get speed from quadrature encoder
 void update_speed(){
    current_speed = sense.current_speed();
 }
- 
+//Thread
 void serial_h_thread(){
     while(1){
         serial_interface.handle(serial, sense.current_position());
